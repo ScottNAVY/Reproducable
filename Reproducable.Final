@@ -1,0 +1,142 @@
+---
+title: "Reproducable.01"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("C:/Users/mclea/Desktop/DataScienceR/Reproducable/repdata_data_activity")
+library("knitr", lib.loc="~/R/win-library/3.5")
+library("ggplot2", lib.loc="~/R/win-library/3.5")
+
+```
+
+Item 1) Read Data
+
+```{r activity}
+ Act<-read.csv("activity.csv")
+summary(Act)
+```
+Item 2) Histogram of total steps/day
+
+```{r activity}
+DayStep<- tapply(Act[,"steps"], Act[,"date"], sum)
+hist(DayStep)
+```
+
+Item 3) Mean and Median of total Steps/Day
+
+```{r activity}
+summary(DayStep)
+#Mean steps = 10766
+#Median steps = 10765
+```
+Item 4) Plot a Time series of the average number of steps taken
+
+```{r activity}
+TimeAvgStep<-tapply(Act[,"steps"], Act[,"interval"], mean, na.rm=TRUE)
+plot(TimeAvgStep, type = "l",main = "Average Step Time Series", xlab = "Interval Number", ylab = "Average Number of Steps")
+
+#I can see the interval number in the array, and I want to plot against THAT, but I don't see how to access it
+
+```
+Item 5) Find the 5 minute window that had the MOST steps
+
+```{r activity}
+m<-max(TimeAvgStep)
+#Max steps is 206.2 steps
+which(TimeAvgStep == m)
+#I can see that Max happens at 8:35
+
+```
+Item 6) Develop a strategy for inputting missing data. 
+
+```{r activity}
+#replace NA with the Mode of that day... or that 5 min interval+day
+
+Act$Days<- weekdays(as.Date(Act$date))
+
+#DayModStep<-tapply(Act$steps, list(Act$interval,Act$Days), mode)
+#this creates a table of "numeric", something must be off with the mode function. I don't feel like getting sidetracked with that problem, so I"m going to use mean instead
+DayAvgStep<-tapply(Act$steps, list(Act$interval,Act$Days), mean, na.rm=TRUE)
+
+#Create a new column called 'scrub' copied from the steps column, but if it's NA, replace with the value from DayAvgStep where the colname == Act$Days, and rowname == Act$int
+
+Act$scrub<-Act$step
+#creates the scrub column, and now it has the valid data in there
+
+#building a loop, using counter i, max m
+i<-1
+n<-nrow(Act)
+#c and r as column and row name variables
+
+for (i in i:n) 
+{
+  if (is.na(Act[i,"scrub"])) 
+    {
+    c<-Act[i,"Days"]
+    r<-which(rownames(DayAvgStep)==Act[i,"interval"])
+    #need to get the row number of DayAvgStep where the rowname of DAS == Act$interval
+    Act[i,"scrub"]<-DayAvgStep [r,c]
+    }
+  i<-i+1
+}
+
+
+```
+Item 7) Histogram AFTER the missing data has been inputted
+
+```{r activity}
+DayStep2<- tapply(Act[,"scrub"], Act[,"Days"], sum)
+hist(DayStep2)
+```
+Item 8) Panal Plot of Avg steps/five minutes across weekdays and weekends
+
+```{r activity}
+Act$Days<-weekdays(as.Date(Act[,"date"]))
+library("lattice", lib.loc="C:/Program Files/R/R-3.5.2/library")
+library("ggplot2", lib.loc="~/R/win-library/3.5")
+
+#use loop to categorize the days. $Weekend
+
+i<-1
+n<-nrow(Act)
+
+for (i in i:n) 
+{
+  if (substr(Act[i,"Days"],1,1)=="S") 
+    {
+    Act[i,"Weekend"]<-"Weekend"
+    }
+    else
+    {
+    Act[i,"Weekend"]<-"Weekday"
+    }
+    }
+  i<-i+1
+}
+
+
+WeekendAvgStep<-tapply(Act$scrub, list(Act$interval,Act$Weekend), mean, na.rm=TRUE)
+
+DASID<-as.data.frame(rownames(WeekendAvgStep))
+DASID$interval<-DASID$`rownames(WeekendAvgStep)`
+WeekendAvgStep<-cbind.data.frame(WeekendAvgStep,DASID$interval)
+#super ugly, but works. 
+
+#now we have something to plot against
+
+par(mfrow=c(2,1))
+
+plot(WeekendAvgStep$Weekday~WeekendAvgStep$`DASID$interval`, type = "l",main = "Weekday Average Step Time Series", xlab = "Interval Number", ylab = "Weekday Steps")
+
+plot(WeekendAvgStep$Weekend~WeekendAvgStep$`DASID$interval`, type = "l",main = "Weekend Average Step Time Series", xlab = "Interval Number", ylab = "Weekend Steps")
+
+```
+Item 9) All code must be in a repeatable format
+
+```{r activity}
+plot(pressure)
+```
